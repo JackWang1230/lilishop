@@ -3,7 +3,9 @@ package cn.lili.modules.promotion.service;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.promotion.entity.dos.MemberCoupon;
 import cn.lili.modules.promotion.entity.dto.search.MemberCouponSearchParams;
+import cn.lili.modules.promotion.entity.vos.MemberCouponVO;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
@@ -138,5 +140,29 @@ public interface MemberCouponService extends IService<MemberCoupon> {
      * @param couponIds 优惠券id集合
      */
     void closeMemberCoupon(List<String> couponIds);
+
+    /**
+     * 恢复会员优惠券
+     *
+     * @param memberCouponIds 会员优惠券id列表
+     * @return 是否恢复成功
+     */
+    boolean recoveryMemberCoupon(List<String> memberCouponIds);
+
+    /**
+     * 作废优惠券
+     *
+     * @param couponId 优惠券ID
+     */
+    void voidCoupon(String couponId);
+
+    /**
+     * 获取会员优惠券列表
+     *
+     * @param page 分页参数
+     * @param param 查询参数
+     * @return 会员优惠券列表
+     */
+    Page<MemberCouponVO> getMemberCouponsPage(Page<MemberCoupon> page, MemberCouponSearchParams param);
 
 }

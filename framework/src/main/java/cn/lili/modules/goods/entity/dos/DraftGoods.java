@@ -12,7 +12,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.Length;
 
 import javax.validation.constraints.Max;
 
@@ -112,8 +111,11 @@ public class DraftGoods extends BaseEntity {
     private String goodsVideo;
 
     @ApiModelProperty(value = "是否为推荐商品")
-    private boolean recommend;
+    private Boolean recommend;
 
+    /**
+     * @see cn.lili.modules.goods.entity.enums.GoodsSalesModeEnum
+     */
     @ApiModelProperty(value = "销售模式")
     private String salesModel;
 

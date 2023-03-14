@@ -4,7 +4,6 @@ import cn.lili.common.vo.PageVO;
 import cn.lili.modules.search.entity.dos.EsGoodsIndex;
 import cn.lili.modules.search.entity.dos.EsGoodsRelatedInfo;
 import cn.lili.modules.search.entity.dto.EsGoodsSearchDTO;
-import cn.lili.modules.search.entity.dto.HotWordsDTO;
 import org.springframework.data.elasticsearch.core.SearchPage;
 
 import java.util.List;
@@ -27,28 +26,6 @@ public interface EsGoodsSearchService {
     SearchPage<EsGoodsIndex> searchGoods(EsGoodsSearchDTO searchDTO, PageVO pageVo);
 
     /**
-     * 获取热门关键词
-     *
-     * @param count 热词数量
-     * @return 热词集合
-     */
-    List<String> getHotWords(Integer count);
-
-    /**
-     * 设置热门关键词
-     *
-     * @param hotWords 热词分数
-     */
-    void setHotWords(HotWordsDTO hotWords);
-
-    /**
-     * 删除热门关键词
-     *
-     * @param keywords 热词
-     */
-    void deleteHotWords(String keywords);
-
-    /**
      * 获取筛选器
      *
      * @param goodsSearch 搜索条件
@@ -63,7 +40,7 @@ public interface EsGoodsSearchService {
      * @param skuIds SkuId列表
      * @return ES商品列表
      */
-    List<EsGoodsIndex> getEsGoodsBySkuIds(List<String> skuIds);
+    List<EsGoodsIndex> getEsGoodsBySkuIds(List<String> skuIds, PageVO pageVo);
 
     /**
      * 根据id获取商品索引

@@ -6,8 +6,7 @@ import cn.lili.modules.goods.entity.enums.GoodsAuthEnum;
 import cn.lili.modules.goods.entity.enums.GoodsStatusEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.*;
 
 import java.util.Arrays;
 
@@ -19,6 +18,9 @@ import java.util.Arrays;
  */
 @EqualsAndHashCode(callSuper = true)
 @Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class GoodsSearchParams extends PageVO {
 
     private static final long serialVersionUID = 2544015852728566887L;
@@ -77,6 +79,12 @@ public class GoodsSearchParams extends PageVO {
     @ApiModelProperty(value = "商品类型")
     private String goodsType;
 
+    /**
+     * @see cn.lili.modules.goods.entity.enums.GoodsSalesModeEnum
+     */
+    @ApiModelProperty(value = "销售模式", required = true)
+    private String salesModel;
+
     public <T> QueryWrapper<T> queryWrapper() {
         QueryWrapper<T> queryWrapper = new QueryWrapper<>();
         if (CharSequenceUtil.isNotEmpty(goodsId)) {
@@ -120,6 +128,9 @@ public class GoodsSearchParams extends PageVO {
         }
         if (CharSequenceUtil.isNotEmpty(goodsType)) {
             queryWrapper.eq("goods_type", goodsType);
+        }
+        if (CharSequenceUtil.isNotEmpty(salesModel)) {
+            queryWrapper.eq("sales_model", salesModel);
         }
 
         queryWrapper.eq("delete_flag", false);

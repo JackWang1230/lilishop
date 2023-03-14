@@ -32,8 +32,6 @@ import java.util.stream.Collectors;
 public class CouponRender implements CartRenderStep {
 
     @Autowired
-    private PromotionPriceUtil promotionPriceUtil;
-    @Autowired
     private MemberCouponService memberCouponService;
 
     @Override
@@ -57,8 +55,12 @@ public class CouponRender implements CartRenderStep {
      * @param tradeDTO 交易dto
      */
     private void renderCouponRule(TradeDTO tradeDTO) {
+        // 清除之前的优惠券
+        tradeDTO.removeCoupon();
+
         List<MemberCoupon> memberCouponList = memberCouponService.getMemberCoupons(tradeDTO.getMemberId());
 
+        //获取最新优惠券
         memberCouponList = memberCouponList.stream()
                 .filter(item -> item.getStartTime().before(new Date()) && item.getEndTime().after(new Date()))
                 .collect(Collectors.toList());
@@ -263,9 +265,9 @@ public class CouponRender implements CartRenderStep {
      */
     private void renderCouponPrice(Map<String, Double> couponMap, TradeDTO tradeDTO, MemberCoupon coupon, MemberCouponDTO memberCouponDTO) {
         //分发优惠券
-        promotionPriceUtil.recountPrice(tradeDTO, memberCouponDTO.getSkuDetail(), memberCouponDTO.getMemberCoupon().getPrice(),
+        PromotionPriceUtil.recountPrice(tradeDTO, memberCouponDTO.getSkuDetail(), memberCouponDTO.getMemberCoupon().getPrice(),
                 Boolean.TRUE.equals(coupon.getPlatformFlag()) ?
-                        PromotionTypeEnum.PLATFORM_COUPON : PromotionTypeEnum.COUPON);
+                        PromotionTypeEnum.PLATFORM_COUPON : PromotionTypeEnum.COUPON, memberCouponDTO.getMemberCoupon().getCouponId());
         //如果是平台券 则需要计算商家承担比例
         if (Boolean.TRUE.equals(coupon.getPlatformFlag()) && coupon.getStoreCommission() > 0) {
 

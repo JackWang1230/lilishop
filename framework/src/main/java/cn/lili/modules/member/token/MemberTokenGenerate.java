@@ -37,17 +37,18 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
     @Override
     public Token createToken(Member member, Boolean longTerm) {
 
-        //获取客户端类型
-        String clientType = ThreadContextHolder.getHttpRequest().getHeader("clientType");
+
         ClientTypeEnum clientTypeEnum;
         try {
+            //获取客户端类型
+            String clientType = ThreadContextHolder.getHttpRequest().getHeader("clientType");
             //如果客户端为空，则缺省值为PC，pc第三方登录时不会传递此参数
             if (clientType == null) {
                 clientTypeEnum = ClientTypeEnum.PC;
             } else {
                 clientTypeEnum = ClientTypeEnum.valueOf(clientType);
             }
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             clientTypeEnum = ClientTypeEnum.UNKNOWN;
         }
         //记录最后登录时间，客户端类型
@@ -56,14 +57,21 @@ public class MemberTokenGenerate extends AbstractTokenGenerate<Member> {
         String destination = rocketmqCustomProperties.getMemberTopic() + ":" + MemberTagsEnum.MEMBER_LOGIN.name();
         rocketMQTemplate.asyncSend(destination, member, RocketmqSendCallbackBuilder.commonCallback());
 
-        AuthUser authUser = new AuthUser(member.getUsername(), member.getId(), member.getNickName(), member.getFace(), UserEnums.MEMBER);
+        AuthUser authUser = AuthUser.builder()
+                .username(member.getUsername())
+                .face(member.getFace())
+                .id(member.getId())
+                .role(UserEnums.MEMBER)
+                .nickName(member.getNickName())
+                .longTerm(longTerm)
+                .build();
         //登陆成功生成token
-        return tokenUtil.createToken(member.getUsername(), authUser, longTerm, UserEnums.MEMBER);
+        return tokenUtil.createToken(authUser);
     }
 
     @Override
     public Token refreshToken(String refreshToken) {
-        return tokenUtil.refreshToken(refreshToken, UserEnums.MEMBER);
+        return tokenUtil.refreshToken(refreshToken);
     }
 
 }

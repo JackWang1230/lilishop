@@ -11,6 +11,8 @@ import cn.lili.common.utils.SnowFlake;
 import cn.lili.common.utils.StringUtils;
 import cn.lili.modules.member.entity.dos.Member;
 import cn.lili.modules.member.service.MemberService;
+import cn.lili.modules.payment.entity.enums.PaymentMethodEnum;
+import cn.lili.modules.payment.kit.CashierSupport;
 import cn.lili.modules.system.entity.dos.Setting;
 import cn.lili.modules.system.entity.dto.WithdrawalSetting;
 import cn.lili.modules.system.entity.enums.SettingEnum;
@@ -77,6 +79,8 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
      */
     @Autowired
     private MemberWithdrawApplyService memberWithdrawApplyService;
+    @Autowired
+    private CashierSupport cashierSupport;
 
     @Override
     public MemberWalletVO getMemberWallet(String memberId) {
@@ -84,7 +88,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
         QueryWrapper<MemberWallet> queryWrapper = new QueryWrapper<>();
         queryWrapper.eq("member_id", memberId);
         //执行查询
-        MemberWallet memberWallet = this.baseMapper.selectOne(queryWrapper);
+        MemberWallet memberWallet = this.getOne(queryWrapper, false);
         //如果没有钱包，则创建钱包
         if (memberWallet == null) {
             memberWallet = this.save(memberId, memberService.getById(memberId).getUsername());
@@ -168,8 +172,8 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
         //检测会员预存款讯息是否存在，如果不存在则新建
         MemberWallet memberWallet = this.checkMemberWallet(memberWalletUpdateDTO.getMemberId());
         //校验此金额是否超过冻结金额
-        if (0 > CurrencyUtil.sub(memberWallet.getMemberWallet(), memberWalletUpdateDTO.getMoney())) {
-            throw new ServiceException(ResultCode.WALLET_WITHDRAWAL_INSUFFICIENT);
+        if (0 > CurrencyUtil.sub(memberWallet.getMemberFrozenWallet(), memberWalletUpdateDTO.getMoney())) {
+            throw new ServiceException(ResultCode.WALLET_WITHDRAWAL_FROZEN_AMOUNT_INSUFFICIENT);
         }
         memberWallet.setMemberFrozenWallet(CurrencyUtil.sub(memberWallet.getMemberFrozenWallet(), memberWalletUpdateDTO.getMoney()));
         this.updateById(memberWallet);
@@ -186,7 +190,7 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
      */
     private MemberWallet checkMemberWallet(String memberId) {
         //获取会员预存款信息
-        MemberWallet memberWallet = this.getOne(new QueryWrapper<MemberWallet>().eq("member_id", memberId));
+        MemberWallet memberWallet = this.getOne(new QueryWrapper<MemberWallet>().eq("member_id", memberId), false);
         //如果会员预存款信息不存在则同步重新建立预存款信息
         if (memberWallet == null) {
             Member member = memberService.getById(memberId);
@@ -253,6 +257,11 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Boolean applyWithdrawal(Double price) {
+
+        if (price == null || price <= 0 || price > 1000000) {
+            throw new ServiceException(ResultCode.WALLET_WITHDRAWAL_AMOUNT_ERROR);
+        }
+
         MemberWithdrawalMessage memberWithdrawalMessage = new MemberWithdrawalMessage();
         AuthUser authUser = UserContext.getCurrentUser();
         //构建审核参数
@@ -302,7 +311,8 @@ public class MemberWalletServiceImpl extends ServiceImpl<MemberWalletMapper, Mem
         memberWithdrawApply.setInspectTime(new Date());
         //保存或者修改零钱提现
         this.memberWithdrawApplyService.saveOrUpdate(memberWithdrawApply);
-        //TODO 调用自动提现接口
+        //TODO 做成配置项目
+        cashierSupport.transfer(PaymentMethodEnum.WECHAT, memberWithdrawApply);
         boolean result = true;
         //如果微信提现失败 则抛出异常 回滚数据
         if (!result) {

@@ -37,6 +37,7 @@ public enum ResultCode {
     LIMIT_ERROR(1003, "访问过于频繁，请稍后再试"),
     ILLEGAL_REQUEST_ERROR(1004, "非法请求，请重新刷新页面操作"),
     IMAGE_FILE_EXT_ERROR(1005, "不支持图片格式"),
+    FILE_NOT_EXIST_ERROR(1011, "上传文件不能为空"),
     FILE_TYPE_NOT_SUPPORT(1010, "不支持上传的文件类型！"),
     PLATFORM_NOT_SUPPORTED_IM(1006, "平台未开启IM"),
     STORE_NOT_SUPPORTED_IM(1007, "店铺未开启IM"),
@@ -76,6 +77,12 @@ public enum ResultCode {
     GOODS_SKU_QUANTITY_ERROR(11011, "商品库存数量不能为负数"),
     GOODS_SKU_QUANTITY_NOT_ENOUGH(11011, "商品库存不足"),
     MUST_HAVE_GOODS_SKU(11012, "规格必须要有一个！"),
+    MUST_HAVE_SALES_MODEL(11022, "销售模式为批发时必须要有批发规则！"),
+
+    HAVE_INVALID_SALES_MODEL(11023, "批发规则存在小于等于0的无效数据！"),
+    MUST_HAVE_GOODS_SKU_VALUE(11024, "规格值不能为空！"),
+    DO_NOT_MATCH_WHOLESALE(11025, "批发商品购买数量不能低于起拍量！"),
+
     GOODS_PARAMS_ERROR(11013, "商品参数错误，刷新后重试"),
     PHYSICAL_GOODS_NEED_TEMP(11014, "实物商品需选择配送模板"),
     VIRTUAL_GOODS_NOT_NEED_TEMP(11015, "虚拟商品无需选择配送模板"),
@@ -133,7 +140,14 @@ public enum ResultCode {
     USER_CONNECT_BANDING_ERROR(20023, "当前联合登陆方式，已绑定其他账号，需进行解绑操作"),
     USER_CONNECT_NOT_EXIST_ERROR(20024, "暂无联合登陆信息，无法实现一键注册功能，请点击第三方登录进行授权"),
     USER_POINTS_ERROR(20024, "用户积分不足"),
-
+    CLERK_SUPPER(20025, "店主无法操作"),
+    CLERK_SAVE_ERROR(20026, "店员保存失败"),
+    CLERK_NOT_FOUND_ERROR(20027, "店员不存在"),
+    USER_STATUS_ERROR(20028, "用户已禁用"),
+    CLERK_USER_ERROR(20029, "此账户已经绑定其他店铺"),
+    CLERK_ALREADY_EXIT_ERROR(20030, "店员已经存在"),
+    CLERK_DISABLED_ERROR(20031, "店员已禁用"),
+    CLERK_CURRENT_SUPPER(20032, "无法删除当前登录店员"),
     /**
      * 权限
      */
@@ -142,6 +156,10 @@ public enum ResultCode {
     PERMISSION_MENU_ROLE_ERROR(21003, "菜单已绑定角色，请先删除或编辑角色"),
     PERMISSION_DEPARTMENT_DELETE_ERROR(21004, "部门已经绑定管理员，请先删除或编辑管理员"),
     PERMISSION_BEYOND_TEN(21005, "最多可以设置10个角色"),
+    PERMISSION_NOT_FOUND_ERROR(21006, "部门不存在"),
+    PERMISSION_ROLE_NOT_FOUND_ERROR(21007, "角色不存在"),
+    PERMISSION_CLERK_BAND_ERROR(21008, "此手机号码已绑定其他店铺 "),
+
 
     /**
      * 分销
@@ -175,12 +193,16 @@ public enum ResultCode {
     ORDER_NOT_USER(31007, "非当前会员的订单"),
     ORDER_TAKE_ERROR(31008, "当前订单无法核销"),
     MEMBER_ADDRESS_NOT_EXIST(31009, "订单无收货地址，请先配置收货地址"),
+    STORE_ADDRESS_NOT_EXIST(31009, "订单没有自提地址,请先选择自提地址"),
     ORDER_DELIVER_NUM_ERROR(31010, "没有待发货的订单"),
     ORDER_NOT_SUPPORT_DISTRIBUTION(31011, "购物车中包含不支持配送的商品，请重新选择收货地址，或者重新选择商品"),
+    ORDER_NOT_EXIST_VALID(31041, "购物车中无有效商品，请检查购物车内商品，或者重新选择商品"),
     ORDER_CAN_NOT_CANCEL(31012, "当前订单状态不可取消"),
     ORDER_BATCH_DELIVER_ERROR(31013, "批量发货,文件读取失败"),
     ORDER_ITEM_NOT_EXIST(31014, "当前订单项不存在！"),
     POINT_NOT_ENOUGH(31015, "当前会员积分不足购买当前积分商品！"),
+
+    ORDER_LABEL_ORDER_ERROR(31016, "订单不能打印电子面单"),
 
 
     /**
@@ -199,7 +221,7 @@ public enum ResultCode {
     PAY_POINT_ENOUGH(32010, "积分不足，不能兑换"),
     PAY_NOT_EXIST_ORDER(32011, "支付订单不存在"),
     CAN_NOT_RECHARGE_WALLET(32012, "不能使用余额进行充值"),
-
+    RECHARGE_PRICE_ERROR(32013, "充值金额错误"),
 
     /**
      * 售后
@@ -237,7 +259,7 @@ public enum ResultCode {
     WALLET_REMARK_ERROR(34004, "请填写审核备注！"),
     WALLET_EXIT_ERROR(34000, "钱包已存在，无法重复创建"),
     WALLET_APPLY_ERROR(34005, "提现申请异常！"),
-
+    WALLET_WITHDRAWAL_AMOUNT_ERROR(34006, "申请提现金额异常！"),
     /**
      * 评价
      */
@@ -248,6 +270,7 @@ public enum ResultCode {
      */
     PROMOTION_GOODS_NOT_EXIT(40000, "当前促销商品不存在！"),
     PROMOTION_GOODS_QUANTITY_NOT_EXIT(40020, "当前促销商品库存不足！"),
+    PROMOTION_GOODS_DO_NOT_JOIN_WHOLESALE(40050, "批发商品无法参加促销"),
     PROMOTION_SAME_ACTIVE_EXIST(40001, "活动时间内已存在同类活动，请选择关闭、删除当前时段的活动"),
     PROMOTION_START_TIME_ERROR(40002, "活动起始时间不能小于当前时间"),
     PROMOTION_END_TIME_ERROR(40003, "活动结束时间不能小于当前时间"),
@@ -260,6 +283,7 @@ public enum ResultCode {
     PROMOTION_ACTIVITY_GOODS_ERROR(40009, "当前活动已经开始无法添加商品"),
     PROMOTION_ACTIVITY_ERROR(400010, "当前促销活动不存在"),
     PROMOTION_LOG_EXIST(40011, "活动已参加，已发重复参加"),
+    APPLY_END_TIME_ERROR(40012, "参与截至时间不能小于当前时间，不能大于活动开始时间"),
 
     /**
      * 优惠券
@@ -272,11 +296,6 @@ public enum ResultCode {
     COUPON_RECEIVE_ERROR(41005, "当前优惠券已经被领取完了，下次要早点来哦"),
     COUPON_NUM_INSUFFICIENT_ERROR(41006, "优惠券剩余领取数量不足"),
     COUPON_NOT_EXIST(41007, "当前优惠券不存在"),
-    COUPON_DO_NOT_RECEIVER(41030, "当前优惠券不允许主动领取"),
-    COUPON_ACTIVITY_NOT_EXIST(410022, "当前优惠券活动不存在"),
-    COUPON_SAVE_ERROR(41020, "保存优惠券失败"),
-    COUPON_ACTIVITY_SAVE_ERROR(41023, "保存优惠券活动失败"),
-    COUPON_DELETE_ERROR(41021, "删除优惠券失败"),
     COUPON_LIMIT_NUM_LESS_THAN_0(41008, "领取限制数量不能为负数"),
     COUPON_LIMIT_GREATER_THAN_PUBLISH(41009, "领取限制数量超出发行数量"),
     COUPON_DISCOUNT_ERROR(41010, "优惠券折扣必须小于10且大于0"),
@@ -286,7 +305,17 @@ public enum ResultCode {
     COUPON_SCOPE_ERROR(41014, "指定商品范围关联id无效！"),
     COUPON_MEMBER_NOT_EXIST(41015, "没有当前会员优惠券"),
     COUPON_MEMBER_STATUS_ERROR(41016, "当前会员优惠券已过期/作废无法变更状态！"),
+    COUPON_RANGE_ERROR(41017, "优惠券使用时间范围错误"),
 
+    SPECIAL_CANT_USE(41019, "特殊商品不能使用优惠券，不能使用"),
+
+    COUPON_SAVE_ERROR(41020, "保存优惠券失败"),
+    COUPON_DELETE_ERROR(41021, "删除优惠券失败"),
+    COUPON_ACTIVITY_NOT_EXIST(41022, "当前优惠券活动不存在"),
+    COUPON_ACTIVITY_SAVE_ERROR(41023, "保存优惠券活动失败"),
+    COUPON_ACTIVITY_MAX_NUM(41024, "优惠券活动赠券数量最多为5"),
+
+    COUPON_DO_NOT_RECEIVER(41030, "当前优惠券不允许主动领取"),
 
     /**
      * 拼团
@@ -349,6 +378,7 @@ public enum ResultCode {
     COUPON_ACTIVITY_ITEM_ERROR(46003, "优惠券活动必须指定优惠券，不能为空"),
     COUPON_ACTIVITY_ITEM_MUST_NUM_ERROR(46004, "优惠券活动最多指定10个优惠券"),
     COUPON_ACTIVITY_ITEM_NUM_ERROR(46005, "赠券数量必须大于0"),
+    COUPON_ACTIVITY_ITEM_NUM_MAX_VALUE_2(46006, "赠券数量最大为2"),
 
     /**
      * 其他促销
@@ -379,11 +409,14 @@ public enum ResultCode {
 
     STORE_NOT_EXIST(50001, "此店铺不存在"),
     STORE_NAME_EXIST_ERROR(50002, "店铺名称已存在!"),
-    STORE_APPLY_DOUBLE_ERROR(50003, "已有店铺，无需重复申请!"),
+    STORE_APPLY_DOUBLE_ERROR(50003, "已经拥有店铺!"),
     STORE_NOT_OPEN(50004, "该会员未开通店铺"),
     STORE_NOT_LOGIN_ERROR(50005, "未登录店铺"),
     STORE_CLOSE_ERROR(50006, "店铺关闭，请联系管理员"),
+    STORE_DELIVER_GOODS_ADDRESS(50007,"请填写商家发货地址"),
     FREIGHT_TEMPLATE_NOT_EXIST(50010, "当前模版不存在"),
+    STORE_STATUS_ERROR(50011, "店铺状态异常，无法申请"),
+    STORE_DELIVER_ADDRESS_EXIST(50012,"请填写发货地址"),
 
     /**
      * 结算单
@@ -419,6 +452,7 @@ public enum ResultCode {
     ALIPAY_EXCEPTION(70003, "支付宝支付错误，请稍后重试"),
     ALIPAY_PARAMS_EXCEPTION(70004, "支付宝参数异常"),
     LOGISTICS_NOT_SETTING(70005, "您还未配置快递查询"),
+    LOGISTICS_CHECK_SETTING(70005, "操作失败,请检查您的快递鸟配置"),
     ORDER_SETTING_ERROR(70006, "系统订单配置异常"),
     ALI_SMS_SETTING_ERROR(70007, "您还未配置阿里云短信"),
     SMS_SIGN_EXIST_ERROR(70008, "短信签名已存在"),
@@ -460,6 +494,12 @@ public enum ResultCode {
     APP_VERSION_EXIST(80307, "APP版本已存在"),
 
     /**
+     * IM
+     */
+    IM_MESSAGE_ADD_ERROR(80400,"IM消息发送错误"),
+    IM_MESSAGE_EDIT_ERROR(80400,"IM消息更新错误"),
+
+    /**
      * 其他
      */
     CUSTOM_WORDS_EXIST_ERROR(90000, "当前自定义分词已存在！"),
@@ -469,6 +509,7 @@ public enum ResultCode {
     ELASTICSEARCH_INDEX_INIT_ERROR(90003, "索引初始化失败！"),
     PURCHASE_ORDER_DEADLINE_ERROR(90004, "供求单，已超过报名截止时间"),
     INDEX_BUILDING(90005, "索引正在生成");
+
 
     private final Integer code;
     private final String message;

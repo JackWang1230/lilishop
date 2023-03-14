@@ -209,6 +209,10 @@ public enum CachePrefix {
      */
     PROMOTION,
     /**
+     * 当前优惠券活动
+     */
+    CURRENT_COUPON_ACTIVITY,
+    /**
      * 促销活动
      */
     PROMOTION_GOODS,
@@ -236,6 +240,10 @@ public enum CachePrefix {
      * 积分商品缓存key前缀
      */
     STORE_ID_EXCHANGE,
+    /**
+     * 会员领取标记
+     */
+    MEMBER_COUPON_SIGN,
 
 
     //================交易=================
@@ -441,6 +449,10 @@ public enum CachePrefix {
      * 分销员
      */
     DISTRIBUTION,
+    /**
+     * 邀请人
+     */
+    INVITER,
 
     /**
      * 找回手机
@@ -466,6 +478,10 @@ public enum CachePrefix {
     INIT_INDEX_FLAG,
 
     /**
+     * 店铺
+     */
+    STORE,
+    /**
      * 店铺分类
      */
     STORE_CATEGORY,
@@ -475,8 +491,19 @@ public enum CachePrefix {
     MENU_USER_ID,
     /**
      * 用户菜单
+     * <p>
+     * 这个缓存并非永久缓存，而是300秒缓存，也就是说修改用户关联的部门，关联的角色，
+     * 部门关联的角色，角色关联的菜单等等，最多需要5分钟才能生效
+     */
+    STORE_MENU_USER_ID,
+    /**
+     * 用户菜单
      */
     USER_MENU,
+    /**
+     * 用户菜单
+     */
+    STORE_USER_MENU,
     /**
      * 订单暂时缓存
      */
@@ -484,7 +511,15 @@ public enum CachePrefix {
     /**
      * 敏感词
      */
-    SENSITIVE;
+    SENSITIVE,
+
+    /**
+     * 扫码登录
+     *
+     * @param str
+     * @return
+     */
+    QR_CODE_LOGIN_SESSION;
 
 
     public static String removePrefix(String str) {

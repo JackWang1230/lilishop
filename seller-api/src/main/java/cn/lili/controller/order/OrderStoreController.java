@@ -15,6 +15,7 @@ import cn.lili.modules.order.order.entity.vo.OrderDetailVO;
 import cn.lili.modules.order.order.entity.vo.OrderSimpleVO;
 import cn.lili.modules.order.order.service.OrderPriceService;
 import cn.lili.modules.order.order.service.OrderService;
+import cn.lili.modules.system.service.LogisticsService;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
@@ -60,6 +61,12 @@ public class OrderStoreController {
      */
     @Autowired
     private StoreLogisticsService storeLogisticsService;
+
+    /**
+     * 快递
+     */
+    @Autowired
+    private LogisticsService logisticsService;
 
 
     @ApiOperation(value = "查询订单列表")
@@ -114,6 +121,14 @@ public class OrderStoreController {
     }
 
     @PreventDuplicateSubmissions
+    @ApiOperation(value = "订单顺丰发货")
+    @ApiImplicitParam(name = "orderSn", value = "订单sn", required = true, dataType = "String", paramType = "path")
+    @PostMapping(value = "/{orderSn}/shunfeng/delivery")
+    public ResultMessage<Object> shunFengDelivery(@NotNull(message = "参数非法") @PathVariable String orderSn) {
+        return ResultUtil.data(orderService.shunFengDelivery(orderSn));
+    }
+
+    @PreventDuplicateSubmissions
     @ApiOperation(value = "取消订单")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "orderSn", value = "订单编号", required = true, dataType = "String", paramType = "path"),
@@ -140,6 +155,16 @@ public class OrderStoreController {
     @PutMapping(value = "/take/{orderSn}/{verificationCode}")
     public ResultMessage<Object> take(@PathVariable String orderSn, @PathVariable String verificationCode) {
         return ResultUtil.data(orderService.take(orderSn, verificationCode));
+    }
+
+    @PreventDuplicateSubmissions
+    @ApiOperation(value = "订单核验")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "verificationCode", value = "核验码", required = true, paramType = "path")
+    })
+    @PutMapping(value = "/take/{verificationCode}")
+    public ResultMessage<Object> take(@PathVariable String verificationCode) {
+        return ResultUtil.data(orderService.take(verificationCode));
     }
 
     @ApiOperation(value = "查询物流踪迹")
@@ -173,5 +198,17 @@ public class OrderStoreController {
     @GetMapping("/queryExportOrder")
     public ResultMessage<List<OrderExportDTO>> queryExportOrder(OrderSearchParams orderSearchParams) {
         return ResultUtil.data(orderService.queryExportOrder(orderSearchParams));
+    }
+
+    @PreventDuplicateSubmissions
+    @ApiOperation(value = "创建电子面单")
+    @PostMapping(value = "/{orderSn}/createElectronicsFaceSheet")
+    @ApiImplicitParams({
+            @ApiImplicitParam(name = "orderSn", value = "订单号", required = true, paramType = "path"),
+            @ApiImplicitParam(name = "logisticsId", value = "物流公司", required = true, dataType = "String", paramType = "query")
+    })
+    public ResultMessage<Object> createElectronicsFaceSheet(@NotNull(message = "参数非法") @PathVariable String orderSn,
+                                                            @NotNull(message = "请选择物流公司") String logisticsId) {
+        return ResultUtil.data(logisticsService.labelOrder(orderSn, logisticsId));
     }
 }

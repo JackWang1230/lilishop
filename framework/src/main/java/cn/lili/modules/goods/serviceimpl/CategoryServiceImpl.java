@@ -19,13 +19,13 @@ import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
  * @since 2020-02-23 15:18:56
  */
 @Service
+@CacheConfig(cacheNames = "{CATEGORY}")
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements CategoryService {
 
     private static final String DELETE_FLAG_COLUMN = "delete_flag";
@@ -60,6 +61,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     }
 
     @Override
+    @Cacheable(key = "#id")
     public Category getCategoryById(String id) {
         return this.getById(id);
     }
@@ -73,6 +75,14 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     @Override
     public List<Category> listByIdsOrderByLevel(List<String> ids) {
         return this.list(new LambdaQueryWrapper<Category>().in(Category::getId, ids).orderByAsc(Category::getLevel));
+    }
+
+    @Override
+    public List<Map<String, Object>> listMapsByIdsOrderByLevel(List<String> ids, String columns) {
+        QueryWrapper<Category> queryWrapper = new QueryWrapper<>();
+        queryWrapper.select(columns);
+        queryWrapper.in("id", ids).orderByAsc("level");
+        return this.listMaps(queryWrapper);
     }
 
     @Override
@@ -216,6 +226,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     }
 
     @Override
+    @CacheEvict(key = "#category.id")
     @Transactional(rollbackFor = Exception.class)
     public void updateCategory(Category category) {
         //判断分类佣金是否正确
@@ -230,18 +241,14 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
             }
         }
         UpdateWrapper<Category> updateWrapper = new UpdateWrapper<>();
-        updateWrapper.eq("id", category.getId())
-                .set("name", category.getName())
-                .set("image", category.getImage())
-                .set("sort_order", category.getSortOrder())
-                .set(DELETE_FLAG_COLUMN, category.getDeleteFlag())
-                .set("commission_rate", category.getCommissionRate());
+        updateWrapper.eq("id", category.getId());
         this.baseMapper.update(category, updateWrapper);
         removeCache();
     }
 
 
     @Override
+    @CacheEvict(key = "#id")
     @Transactional(rollbackFor = Exception.class)
     public void delete(String id) {
         this.removeById(id);
@@ -253,6 +260,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
     }
 
     @Override
+    @CacheEvict(key = "#categoryId")
     @Transactional(rollbackFor = Exception.class)
     public void updateCategoryStatus(String categoryId, Boolean enableOperations) {
         //禁用子分类
@@ -335,7 +343,7 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
                 return item.getChildren();
             }
             if (item.getChildren() != null && !item.getChildren().isEmpty()) {
-                return getChildren(parentId, categoryVOList);
+                return getChildren(parentId, item.getChildren());
             }
         }
         return categoryVOList;
@@ -346,5 +354,6 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
      */
     private void removeCache() {
         cache.remove(CachePrefix.CATEGORY.getPrefix());
+        cache.remove(CachePrefix.CATEGORY_ARRAY.getPrefix());
     }
 }

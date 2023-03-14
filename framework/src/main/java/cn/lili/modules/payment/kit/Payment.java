@@ -6,6 +6,7 @@ import cn.lili.common.vo.ResultMessage;
 import cn.lili.modules.payment.entity.RefundLog;
 import cn.lili.modules.payment.entity.enums.PaymentMethodEnum;
 import cn.lili.modules.payment.kit.dto.PayParam;
+import cn.lili.modules.wallet.entity.dos.MemberWithdrawApply;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -83,17 +84,6 @@ public interface Payment {
         throw new ServiceException(ResultCode.PAY_ERROR);
     }
 
-
-    /**
-     * 取消支付订单
-     *
-     * @param refundLog 支付参数
-     */
-    default void cancel(RefundLog refundLog) {
-        throw new ServiceException(ResultCode.PAY_ERROR);
-    }
-
-
     /**
      * 回调
      *
@@ -122,6 +112,13 @@ public interface Payment {
     }
 
     /**
+     * 提现
+     */
+    default void transfer(MemberWithdrawApply memberWithdrawApply) {
+        throw new ServiceException(ResultCode.PAY_ERROR);
+    }
+
+    /**
      * 支付回调地址
      *
      * @param api               api地址
@@ -131,6 +128,7 @@ public interface Payment {
     default String callbackUrl(String api, PaymentMethodEnum paymentMethodEnum) {
         return api + "/buyer/payment/cashier/callback/" + paymentMethodEnum.name();
     }
+
     /**
      * 支付异步通知地址
      *

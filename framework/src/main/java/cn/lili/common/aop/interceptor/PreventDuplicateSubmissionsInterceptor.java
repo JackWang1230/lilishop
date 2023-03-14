@@ -8,10 +8,12 @@ package cn.lili.common.aop.interceptor;
  * 2022-01-25 09:20
  */
 
+import cn.hutool.json.JSONUtil;
 import cn.lili.cache.Cache;
 import cn.lili.common.aop.annotation.PreventDuplicateSubmissions;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
+import cn.lili.common.security.AuthUser;
 import cn.lili.common.security.context.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.annotation.Aspect;
@@ -36,9 +38,11 @@ public class PreventDuplicateSubmissionsInterceptor {
     public void interceptor(PreventDuplicateSubmissions preventDuplicateSubmissions) {
 
         try {
-            Long count = cache.incr(getParams(), preventDuplicateSubmissions.expire());
-            //如果超过1或者设置的参数，则表示重复提交了
-            if (count.intValue() >= preventDuplicateSubmissions.expire()) {
+            String redisKey = getParams(preventDuplicateSubmissions.userIsolation());
+            Long count = cache.incr(redisKey, preventDuplicateSubmissions.expire());
+            log.debug("防重复提交：params-{},value-{}", redisKey, count);
+            //如果超过0或者设置的参数，则表示重复提交了
+            if (count.intValue() > 0) {
                 throw new ServiceException(ResultCode.LIMIT_ERROR);
             }
         }
@@ -48,6 +52,7 @@ public class PreventDuplicateSubmissionsInterceptor {
         } catch (ServiceException e) {
             throw e;
         } catch (Exception e) {
+            log.error("防重复提交拦截器异常", e);
             throw new ServiceException(ResultCode.ERROR);
         }
     }
@@ -55,12 +60,33 @@ public class PreventDuplicateSubmissionsInterceptor {
     /**
      * 获取表单参数
      *
-     * @return
+     * @param userIsolation 用户是否隔离
+     * @return 计数器key
      */
-    private String getParams() {
+    private String getParams(Boolean userIsolation) {
         HttpServletRequest request = ((ServletRequestAttributes) RequestContextHolder.getRequestAttributes()).getRequest();
+        StringBuilder stringBuilder = new StringBuilder();
+        //拼接请求地址
+        stringBuilder.append(request.getRequestURI());
+
+        //参数不为空则拼接参数
+        if (!request.getParameterMap().isEmpty()) {
+            stringBuilder.append(JSONUtil.toJsonStr(request.getParameterMap()));
+        }
+        //用户隔离设置为开启，则选择当前用回顾
+        if (userIsolation) {
+            AuthUser authUser = UserContext.getCurrentUser();
+            //用户为空则发出警告，但不拼接，否则拼接用户id
+            if (authUser == null) {
+                log.warn("user isolation settings are on,but current user is null");
+            }
+//           不为空则拼接用户id
+            else {
+                stringBuilder.append(authUser.getId());
+            }
+        }
         //请求地址
-        return request.getRequestURI() + UserContext.getCurrentUser().getId() + UserContext.getCurrentUser().getUsername();
+        return stringBuilder.toString();
     }
 
 

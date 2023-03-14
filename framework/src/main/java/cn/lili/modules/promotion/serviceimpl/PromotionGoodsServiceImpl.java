@@ -2,10 +2,17 @@ package cn.lili.modules.promotion.serviceimpl;
 
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.text.CharSequenceUtil;
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
+import cn.lili.cache.Cache;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.vo.PageVO;
 import cn.lili.modules.goods.entity.dos.GoodsSku;
+import cn.lili.modules.goods.entity.dto.GoodsSkuDTO;
+import cn.lili.modules.goods.entity.vos.GoodsVO;
+import cn.lili.modules.goods.service.GoodsService;
 import cn.lili.modules.goods.service.GoodsSkuService;
+import cn.lili.modules.order.cart.entity.enums.CartTypeEnum;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dos.SeckillApply;
 import cn.lili.modules.promotion.entity.dto.search.PromotionGoodsSearchParams;
@@ -16,21 +23,21 @@ import cn.lili.modules.promotion.mapper.PromotionGoodsMapper;
 import cn.lili.modules.promotion.service.PromotionGoodsService;
 import cn.lili.modules.promotion.service.SeckillApplyService;
 import cn.lili.modules.promotion.tools.PromotionTools;
+import cn.lili.modules.search.entity.dos.EsGoodsIndex;
+import cn.lili.modules.search.service.EsGoodsIndexService;
 import cn.lili.mybatis.util.PageUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 促销商品业务层实现
@@ -59,6 +66,15 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
     @Autowired
     private GoodsSkuService goodsSkuService;
 
+    @Autowired
+    private GoodsService goodsService;
+
+    @Autowired
+    private EsGoodsIndexService goodsIndexService;
+
+    @Autowired
+    private Cache cache;
+
     @Override
     public List<PromotionGoods> findSkuValidPromotion(String skuId, String storeIds) {
 
@@ -78,7 +94,28 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
     }
 
     @Override
-    public IPage<PromotionGoods> pageFindAll(PromotionGoodsSearchParams searchParams, PageVO pageVo) {
+    public List<PromotionGoods> findSkuValidPromotions(List<GoodsSkuDTO> skus) {
+        List<String> categories = skus.stream().map(GoodsSku::getCategoryPath).collect(Collectors.toList());
+        List<String> skuIds = skus.stream().map(GoodsSku::getId).collect(Collectors.toList());
+        List<String> categoriesPath = new ArrayList<>();
+        categories.forEach(i -> {
+                    if (CharSequenceUtil.isNotEmpty(i)) {
+                        categoriesPath.addAll(Arrays.asList(i.split(",")));
+                    }
+                }
+        );
+        QueryWrapper<PromotionGoods> queryWrapper = new QueryWrapper<>();
+
+        queryWrapper.and(i -> i.or(j -> j.in(SKU_ID_COLUMN, skuIds))
+                .or(n -> n.eq("scope_type", PromotionsScopeTypeEnum.ALL.name()))
+                .or(n -> n.and(k -> k.eq("scope_type", PromotionsScopeTypeEnum.PORTION_GOODS_CATEGORY.name())
+                        .and(l -> l.in("scope_id", categoriesPath)))));
+        queryWrapper.and(i -> i.or(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.START)).or(PromotionTools.queryPromotionStatus(PromotionsStatusEnum.NEW)));
+        return this.list(queryWrapper);
+    }
+
+    @Override
+    public Page<PromotionGoods> pageFindAll(PromotionGoodsSearchParams searchParams, PageVO pageVo) {
         return this.page(PageUtil.initPage(pageVo), searchParams.queryWrapper());
     }
 
@@ -234,6 +271,20 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
         }
     }
 
+    @Override
+    public void updatePromotionGoodsStock(String skuId, Integer quantity) {
+        LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(PromotionGoods::getSkuId, skuId);
+        this.list(queryWrapper).forEach(promotionGoods -> {
+            String promotionStockKey = PromotionGoodsService.getPromotionGoodsStockCacheKey(PromotionTypeEnum.valueOf(promotionGoods.getPromotionType()), promotionGoods.getPromotionId(), promotionGoods.getSkuId());
+            cache.remove(promotionStockKey);
+        });
+        LambdaUpdateWrapper<PromotionGoods> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(PromotionGoods::getSkuId, skuId);
+        updateWrapper.set(PromotionGoods::getQuantity, quantity);
+        this.update(updateWrapper);
+    }
+
     /**
      * 更新促销活动商品库存
      *
@@ -267,10 +318,16 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
      */
     @Override
     public void deletePromotionGoods(List<String> promotionIds) {
-        LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<PromotionGoods>()
-                .in(PromotionGoods::getPromotionId, promotionIds);
+        LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<PromotionGoods>().in(PromotionGoods::getPromotionId, promotionIds);
         this.remove(queryWrapper);
     }
+
+    @Override
+    public void deletePromotionGoodsByGoods(List<String> goodsIds) {
+        LambdaQueryWrapper<PromotionGoods> queryWrapper = new LambdaQueryWrapper<PromotionGoods>().in(PromotionGoods::getGoodsId, goodsIds);
+        this.remove(queryWrapper);
+    }
+
 
     /**
      * 根据参数删除促销商品
@@ -280,6 +337,43 @@ public class PromotionGoodsServiceImpl extends ServiceImpl<PromotionGoodsMapper,
     @Override
     public void deletePromotionGoods(PromotionGoodsSearchParams searchParams) {
         this.remove(searchParams.queryWrapper());
+    }
+
+    @Override
+    public Map<String, Object> getCurrentGoodsPromotion(GoodsSku dataSku, String cartType) {
+        Map<String, Object> promotionMap;
+        EsGoodsIndex goodsIndex = goodsIndexService.findById(dataSku.getId());
+        if (goodsIndex == null) {
+            GoodsVO goodsVO = this.goodsService.getGoodsVO(dataSku.getGoodsId());
+            goodsIndex = goodsIndexService.getResetEsGoodsIndex(dataSku, goodsVO.getGoodsParamsDTOList());
+        }
+        if (goodsIndex.getPromotionMap() != null && !goodsIndex.getPromotionMap().isEmpty()) {
+            if (goodsIndex.getPromotionMap().keySet().stream().anyMatch(i -> i.contains(PromotionTypeEnum.SECKILL.name())) || (goodsIndex.getPromotionMap().keySet().stream().anyMatch(i -> i.contains(PromotionTypeEnum.PINTUAN.name())) && CartTypeEnum.PINTUAN.name().equals(cartType))) {
+                Optional<Map.Entry<String, Object>> containsPromotion = goodsIndex.getPromotionMap().entrySet().stream().filter(i -> i.getKey().contains(PromotionTypeEnum.SECKILL.name()) || i.getKey().contains(PromotionTypeEnum.PINTUAN.name())).findFirst();
+                containsPromotion.ifPresent(stringObjectEntry -> this.setGoodsPromotionInfo(dataSku, stringObjectEntry));
+            }
+            promotionMap = goodsIndex.getPromotionMap();
+        } else {
+            promotionMap = null;
+            dataSku.setPromotionFlag(false);
+            dataSku.setPromotionPrice(null);
+        }
+        return promotionMap;
+    }
+
+    private void setGoodsPromotionInfo(GoodsSku dataSku, Map.Entry<String, Object> promotionInfo) {
+        JSONObject promotionsObj = JSONUtil.parseObj(promotionInfo.getValue());
+        PromotionGoodsSearchParams searchParams = new PromotionGoodsSearchParams();
+        searchParams.setSkuId(dataSku.getId());
+        searchParams.setPromotionId(promotionsObj.get("id").toString());
+        PromotionGoods promotionsGoods = this.getPromotionsGoods(searchParams);
+        if (promotionsGoods != null && promotionsGoods.getPrice() != null) {
+            dataSku.setPromotionFlag(true);
+            dataSku.setPromotionPrice(promotionsGoods.getPrice());
+        } else {
+            dataSku.setPromotionFlag(false);
+            dataSku.setPromotionPrice(null);
+        }
     }
 
 }

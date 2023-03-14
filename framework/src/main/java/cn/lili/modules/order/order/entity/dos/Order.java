@@ -1,11 +1,14 @@
 package cn.lili.modules.order.order.entity.dos;
 
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ClientTypeEnum;
 import cn.lili.common.enums.PromotionTypeEnum;
+import cn.lili.common.security.sensitive.Sensitive;
+import cn.lili.common.security.sensitive.enums.SensitiveStrategy;
 import cn.lili.common.utils.BeanUtil;
 import cn.lili.modules.goods.entity.enums.GoodsTypeEnum;
+import cn.lili.modules.order.cart.entity.dto.MemberCouponDTO;
 import cn.lili.modules.order.cart.entity.dto.TradeDTO;
 import cn.lili.modules.order.cart.entity.enums.CartTypeEnum;
 import cn.lili.modules.order.cart.entity.enums.DeliveryMethodEnum;
@@ -57,6 +60,7 @@ public class Order extends BaseEntity {
     private String memberId;
 
     @ApiModelProperty(value = "用户名")
+    @Sensitive(strategy = SensitiveStrategy.PHONE)
     private String memberName;
 
     /**
@@ -203,6 +207,18 @@ public class Order extends BaseEntity {
     @ApiModelProperty(value = "使用的平台会员优惠券id")
     private String usePlatformMemberCouponId;
 
+    @ApiModelProperty(value = "qrCode  实物为提货码  虚拟货物为账号")
+    private String qrCode;
+
+    @ApiModelProperty(value = "自提点地址")
+    private String storeAddressPath;
+
+    @ApiModelProperty(value = "自提点电话")
+    private String storeAddressMobile;
+
+    @ApiModelProperty(value = "自提点地址经纬度")
+    private String storeAddressCenter;
+
     /**
      * 构建订单
      *
@@ -226,11 +242,19 @@ public class Order extends BaseEntity {
         this.setRemark(cartVO.getRemark());
         this.setFreightPrice(tradeDTO.getPriceDetailDTO().getFreightPrice());
         //会员收件信息
-        this.setConsigneeAddressIdPath(tradeDTO.getMemberAddress().getConsigneeAddressIdPath());
-        this.setConsigneeAddressPath(tradeDTO.getMemberAddress().getConsigneeAddressPath());
-        this.setConsigneeDetail(tradeDTO.getMemberAddress().getDetail());
-        this.setConsigneeMobile(tradeDTO.getMemberAddress().getMobile());
-        this.setConsigneeName(tradeDTO.getMemberAddress().getName());
+        if(DeliveryMethodEnum.LOGISTICS.name().equals(cartVO.getDeliveryMethod())){
+            this.setConsigneeAddressIdPath(tradeDTO.getMemberAddress().getConsigneeAddressIdPath());
+            this.setConsigneeAddressPath(tradeDTO.getMemberAddress().getConsigneeAddressPath());
+            this.setConsigneeDetail(tradeDTO.getMemberAddress().getDetail());
+            this.setConsigneeMobile(tradeDTO.getMemberAddress().getMobile());
+            this.setConsigneeName(tradeDTO.getMemberAddress().getName());
+        }
+        //自提点信息
+        if(DeliveryMethodEnum.SELF_PICK_UP.name().equals(cartVO.getDeliveryMethod())){
+            this.setStoreAddressPath(tradeDTO.getStoreAddress().getAddress());
+            this.setStoreAddressMobile(tradeDTO.getStoreAddress().getMobile());
+            this.setStoreAddressCenter(tradeDTO.getStoreAddress().getCenter());
+        }
         //平台优惠券判定
         if (tradeDTO.getPlatformCoupon() != null) {
             this.setUsePlatformMemberCouponId(tradeDTO.getPlatformCoupon().getMemberCoupon().getId());
@@ -238,8 +262,8 @@ public class Order extends BaseEntity {
         //店铺优惠券判定
         if (tradeDTO.getStoreCoupons() != null && !tradeDTO.getStoreCoupons().isEmpty()) {
             StringBuilder storeCouponIds = new StringBuilder();
-            for (String s : tradeDTO.getStoreCoupons().keySet()) {
-                storeCouponIds.append(s).append(",");
+            for (MemberCouponDTO value : tradeDTO.getStoreCoupons().values()) {
+                storeCouponIds.append(value.getMemberCoupon().getId()).append(",");
             }
             this.setUseStoreMemberCouponIds(storeCouponIds.toString());
         }
@@ -262,12 +286,14 @@ public class Order extends BaseEntity {
         //判断是否为普通订单、促销订单
         if (tradeDTO.getCartTypeEnum().equals(CartTypeEnum.CART) || tradeDTO.getCartTypeEnum().equals(CartTypeEnum.BUY_NOW)) {
             this.setOrderType(OrderTypeEnum.NORMAL.name());
+            this.setOrderPromotionType(OrderPromotionTypeEnum.NORMAL.name());
         } else if (tradeDTO.getCartTypeEnum().equals(CartTypeEnum.VIRTUAL)) {
             this.setOrderType(OrderTypeEnum.VIRTUAL.name());
+            this.setOrderPromotionType(OrderPromotionTypeEnum.NORMAL.name());
         } else {
             //促销订单（拼团、积分）-判断购买的是虚拟商品还是实物商品
             String goodsType = cartVO.getCheckedSkuList().get(0).getGoodsSku().getGoodsType();
-            if (StrUtil.isEmpty(goodsType) || goodsType.equals(GoodsTypeEnum.PHYSICAL_GOODS.name())) {
+            if (CharSequenceUtil.isEmpty(goodsType) || goodsType.equals(GoodsTypeEnum.PHYSICAL_GOODS.name())) {
                 this.setOrderType(OrderTypeEnum.NORMAL.name());
             } else {
                 this.setOrderType(OrderTypeEnum.VIRTUAL.name());

@@ -38,7 +38,7 @@ public class StudioStoreController {
     @ApiOperation(value = "获取店铺直播间列表")
     @ApiImplicitParam(name = "status", value = "直播间状态", paramType = "query", dataType = "String")
     @GetMapping
-    public ResultMessage<IPage<Studio>> page(PageVO pageVO, String status) {
+    public ResultMessage<IPage<StudioVO>> page(PageVO pageVO, String status) {
         return ResultUtil.data(studioService.studioList(pageVO, null, status));
     }
 
@@ -74,9 +74,9 @@ public class StudioStoreController {
             @ApiImplicitParam(name = "liveGoodsId", value = "直播商品ID", required = true, dataType = "Integer", paramType = "path")
     })
     @PutMapping(value = "/push/{roomId}/{liveGoodsId}")
-    public ResultMessage<Studio> push(@PathVariable Integer roomId, @PathVariable Integer liveGoodsId) {
+    public ResultMessage<Studio> push(@PathVariable Integer roomId, @PathVariable Integer liveGoodsId, @RequestParam String goodsId) {
         String storeId = Objects.requireNonNull(UserContext.getCurrentUser()).getStoreId();
-        if (Boolean.TRUE.equals(studioService.push(roomId, liveGoodsId, storeId))) {
+        if (Boolean.TRUE.equals(studioService.push(roomId, liveGoodsId, storeId, goodsId))) {
             return ResultUtil.success(ResultCode.SUCCESS);
         }
         throw new ServiceException(ResultCode.ERROR);

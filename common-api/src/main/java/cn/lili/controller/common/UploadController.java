@@ -12,7 +12,7 @@ import cn.lili.common.utils.Base64DecodeMultipartFile;
 import cn.lili.common.utils.CommonUtil;
 import cn.lili.common.vo.ResultMessage;
 import cn.lili.modules.file.entity.File;
-import cn.lili.modules.file.plugin.FileManagerPlugin;
+import cn.lili.modules.file.plugin.FilePluginFactory;
 import cn.lili.modules.file.service.FileService;
 import cn.lili.modules.system.entity.dos.Setting;
 import cn.lili.modules.system.entity.enums.SettingEnum;
@@ -47,7 +47,7 @@ public class UploadController {
     @Autowired
     private SettingService settingService;
     @Autowired
-    private FileManagerPlugin fileManagerPlugin;
+    private FilePluginFactory filePluginFactory;
     @Autowired
     private Cache cache;
 
@@ -63,11 +63,14 @@ public class UploadController {
         if (authUser == null) {
             throw new ServiceException(ResultCode.USER_AUTHORITY_ERROR);
         }
+        if (file == null) {
+            throw new ServiceException(ResultCode.FILE_NOT_EXIST_ERROR);
+        }
         Setting setting = settingService.get(SettingEnum.OSS_SETTING.name());
         if (setting == null || CharSequenceUtil.isBlank(setting.getSettingValue())) {
             throw new ServiceException(ResultCode.OSS_NOT_EXIST);
         }
-        if (file == null || CharSequenceUtil.isEmpty(file.getContentType())) {
+        if (CharSequenceUtil.isEmpty(file.getContentType())) {
             throw new ServiceException(ResultCode.IMAGE_FILE_EXT_ERROR);
         }
 
@@ -86,7 +89,7 @@ public class UploadController {
         try {
             InputStream inputStream = file.getInputStream();
             //上传至第三方云服务或服务器
-            result = fileManagerPlugin.inputStreamUpload(inputStream, fileKey);
+            result = filePluginFactory.filePlugin().inputStreamUpload(inputStream, fileKey);
             //保存数据信息至数据库
             newFile.setName(file.getOriginalFilename());
             newFile.setFileSize(file.getSize());

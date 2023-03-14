@@ -28,7 +28,7 @@ import java.util.Map;
  * @author paulG
  **/
 @Data
-@Document(indexName = "#{@elasticsearchProperties.indexPrefix}_" + EsSuffix.GOODS_INDEX_NAME)
+@Document(indexName = "#{@elasticsearchProperties.indexPrefix}_" + EsSuffix.GOODS_INDEX_NAME, createIndex = false)
 @ToString
 @NoArgsConstructor
 @Accessors(chain = true)
@@ -215,6 +215,8 @@ public class EsGoodsIndex implements Serializable {
 
     /**
      * 销售模式
+     *
+     * @see cn.lili.modules.goods.entity.enums.GoodsSalesModeEnum
      */
     @Field(type = FieldType.Text)
     @ApiModelProperty("销售模式")
@@ -256,9 +258,11 @@ public class EsGoodsIndex implements Serializable {
      * @see cn.lili.modules.goods.entity.enums.GoodsTypeEnum
      */
     @ApiModelProperty(value = "商品类型", required = true)
+    @Field(type = FieldType.Text)
     private String goodsType;
 
     @ApiModelProperty(value = "商品sku基础分数", required = true)
+    @Field(type = FieldType.Integer)
     private Integer skuSource;
 
     /**
@@ -274,7 +278,7 @@ public class EsGoodsIndex implements Serializable {
      * @see PromotionTypeEnum
      * value 为 促销活动实体信息
      */
-    @Field(type = FieldType.Nested)
+    @Field(type = FieldType.Text)
     @ApiModelProperty("商品促销活动集合JSON，key 为 促销活动类型，value 为 促销活动实体信息 ")
     private String promotionMapJson;
 
@@ -313,7 +317,7 @@ public class EsGoodsIndex implements Serializable {
     /**
      * 参数索引增加
      *
-     * @param sku 商品sku信息
+     * @param sku            商品sku信息
      * @param goodsParamDTOS 商品参数信息
      */
     public EsGoodsIndex(GoodsSku sku, List<GoodsParamsDTO> goodsParamDTOS) {

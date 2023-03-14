@@ -126,8 +126,9 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         //获取订单货物判断是否可申请售后
         OrderItem orderItem = orderItemService.getBySn(sn);
 
-        //未申请售后订单货物才能进行申请
-        if (!orderItem.getAfterSaleStatus().equals(OrderItemAfterSaleStatusEnum.NOT_APPLIED.name())) {
+        //未申请售后订单货物或部分售后才能进行申请
+        if (!orderItem.getAfterSaleStatus().equals(OrderItemAfterSaleStatusEnum.NOT_APPLIED.name())
+                && !orderItem.getAfterSaleStatus().equals(OrderItemAfterSaleStatusEnum.PART_AFTER_SALE.name())) {
             throw new ServiceException(ResultCode.AFTER_SALES_BAN);
         }
 
@@ -178,7 +179,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         return addAfterSale(afterSaleDTO);
     }
 
-    @AfterSaleLogPoint(sn = "#afterSaleSn", description = "'审核售后:售后编号['+#afterSaleSn+']，'+ #serviceStatus")
+    @AfterSaleLogPoint(sn = "#afterSaleSn", description = "'审核售后:售后编号['+#afterSaleSn+']' ", serviceStatus = "#serviceStatus")
     @SystemLogPoint(description = "售后-审核售后", customerLog = "'审核售后:售后编号['+#afterSaleSn+']，'+ #serviceStatus")
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -268,8 +269,7 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
 
         //根据售后单号获取售后单
         AfterSale afterSale = OperationalJudgment.judgment(this.getBySn(afterSaleSn));
-
-        return logisticsService.getLogistic(afterSale.getMLogisticsCode(), afterSale.getMLogisticsNo());
+        return logisticsService.getLogisticTrack(afterSale.getMLogisticsCode(), afterSale.getMLogisticsNo(), storeDetailService.getStoreDetail(afterSale.getStoreId()).getSalesConsigneeMobile());
     }
 
     @Override
@@ -454,7 +454,10 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
         switch (afterSaleStatusEnum) {
             //判断当前售后的状态---申请中
             case APPLY: {
+//                买家申请售后时已经输入了订单售后数量，这里不需要(+x)处理
                 orderItem.setReturnGoodsNumber(orderItem.getReturnGoodsNumber() + afterSale.getNum());
+                //修改orderItem订单
+                this.updateOrderItem(orderItem);
                 break;
             }
 
@@ -463,13 +466,13 @@ public class AfterSaleServiceImpl extends ServiceImpl<AfterSaleMapper, AfterSale
             case BUYER_CANCEL:
             case SELLER_TERMINATION: {
                 orderItem.setReturnGoodsNumber(orderItem.getReturnGoodsNumber() - afterSale.getNum());
+                //修改orderItem订单
+                this.updateOrderItem(orderItem);
                 break;
             }
             default:
                 break;
         }
-        //修改orderItem订单
-        this.updateOrderItem(orderItem);
     }
 
 

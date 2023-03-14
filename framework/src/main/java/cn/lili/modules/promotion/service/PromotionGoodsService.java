@@ -3,13 +3,16 @@ package cn.lili.modules.promotion.service;
 import cn.lili.cache.CachePrefix;
 import cn.lili.common.enums.PromotionTypeEnum;
 import cn.lili.common.vo.PageVO;
+import cn.lili.modules.goods.entity.dos.GoodsSku;
+import cn.lili.modules.goods.entity.dto.GoodsSkuDTO;
 import cn.lili.modules.promotion.entity.dos.PromotionGoods;
 import cn.lili.modules.promotion.entity.dto.search.PromotionGoodsSearchParams;
-import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 促销商品业务层
@@ -35,11 +38,20 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     /**
      * 获取某sku所有有效活动
      *
-     * @param skuId 商品skuId
+     * @param skuId    商品skuId
      * @param storeIds 店铺id
      * @return 促销商品集合
      */
     List<PromotionGoods> findSkuValidPromotion(String skuId, String storeIds);
+
+
+    /**
+     * 获取sku所有有效活动
+     *
+     * @param skus    商品skuId
+     * @return 促销商品集合
+     */
+    List<PromotionGoods> findSkuValidPromotions(List<GoodsSkuDTO> skus);
 
     /**
      * 分页获取促销商品信息
@@ -48,7 +60,7 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
      * @param pageVo       分页参数
      * @return 促销商品列表
      */
-    IPage<PromotionGoods> pageFindAll(PromotionGoodsSearchParams searchParams, PageVO pageVo);
+    Page<PromotionGoods> pageFindAll(PromotionGoodsSearchParams searchParams, PageVO pageVo);
 
     /**
      * 获取促销商品信息
@@ -70,7 +82,7 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     /**
      * 获取当前有效时间特定促销类型的促销商品信息
      *
-     * @param skuId skuId
+     * @param skuId          skuId
      * @param promotionTypes 特定促销类型
      * @return 促销商品信息
      */
@@ -79,7 +91,7 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     /**
      * 获取当前有效时间特定促销类型的促销商品价格
      *
-     * @param skuId skuId
+     * @param skuId          skuId
      * @param promotionTypes 特定促销类型
      * @return 促销商品价格
      */
@@ -126,6 +138,14 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     void updatePromotionGoodsStock(List<PromotionGoods> promotionGoodsList);
 
     /**
+     * 更新促销活动商品库存
+     *
+     * @param skuId      商品skuId
+     * @param quantity  库存
+     */
+    void updatePromotionGoodsStock(String skuId, Integer quantity);
+
+    /**
      * 更新促销活动商品索引
      *
      * @param promotionGoods 促销商品信息
@@ -148,10 +168,26 @@ public interface PromotionGoodsService extends IService<PromotionGoods> {
     void deletePromotionGoods(List<String> promotionIds);
 
     /**
+     * 删除商品的促销
+     *
+     * @param goodsIds 商品id
+     */
+    void deletePromotionGoodsByGoods(List<String> goodsIds);
+
+    /**
      * 根据参数删除促销商品
      *
      * @param searchParams 查询参数
      */
     void deletePromotionGoods(PromotionGoodsSearchParams searchParams);
+
+    /**
+     * 获取当前商品促销信息
+     *
+     * @param dataSku 商品sku信息
+     * @param cartType 购物车类型
+     * @return 当前商品促销信息
+     */
+    Map<String, Object> getCurrentGoodsPromotion(GoodsSku dataSku, String cartType);
 
 }

@@ -29,7 +29,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * @author paulG
@@ -99,7 +98,7 @@ public abstract class BaseElasticsearchService {
             log.info(" whether all of the nodes have acknowledged the request : {}", createIndexResponse.isAcknowledged());
             log.info(" Indicates whether the requisite number of shard copies were started for each shard in the index before timing out :{}", createIndexResponse.isShardsAcknowledged());
         } catch (Exception e) {
-            log.error("创建索引错误",e);
+            log.error("创建索引错误", e);
             throw new ElasticsearchException("创建索引 {" + index + "} 失败：" + e.getMessage());
         }
     }
@@ -124,7 +123,7 @@ public abstract class BaseElasticsearchService {
                         "            \"type\": \"keyword\"\n" +
                         "          },\n" +
                         "          \"type\": {\n" +
-                        "            \"type\": \"long\"\n" +
+                        "            \"type\": \"integer\"\n" +
                         "          },\n" +
                         "          \"value\": {\n" +
                         "            \"type\": \"keyword\"\n" +
@@ -326,7 +325,7 @@ public abstract class BaseElasticsearchService {
                         "        }\n" +
                         "      },\n" +
                         "      \"promotionMapJson\": {\n" +
-                        "        \"type\": \"text\"\n" +
+                        "        \"type\": \"keyword\"\n" +
                         "      },\n" +
                         "      \"thumbnail\": {\n" +
                         "        \"type\": \"text\",\n" +
@@ -340,23 +339,22 @@ public abstract class BaseElasticsearchService {
                         "    }\n" +
                         "  }\n";
 
-        PutMappingRequest request = new PutMappingRequest(index)
-                        .source(source, XContentType.JSON);
+        PutMappingRequest request = new PutMappingRequest(index).source(source, XContentType.JSON);
         CountDownLatch latch = new CountDownLatch(1);
-        AtomicReference<AcknowledgedResponse> response = new AtomicReference<>();
         client.indices().putMappingAsync(
                 request,
                 RequestOptions.DEFAULT,
                 new ActionListener<AcknowledgedResponse>() {
                     @Override
                     public void onResponse(AcknowledgedResponse r) {
-                        response.set(r);
                         latch.countDown();
+                        log.info("创建索引mapping成功：{}", r);
                     }
 
                     @Override
                     public void onFailure(Exception e) {
                         latch.countDown();
+                        log.error("创建索引mapping失败", e);
                     }
                 });
         latch.await(10, TimeUnit.SECONDS);
@@ -446,7 +444,7 @@ public abstract class BaseElasticsearchService {
         try {
             searchResponse = client.search(searchRequest, COMMON_OPTIONS);
         } catch (IOException e) {
-            log.error("es 搜索错误",e);
+            log.error("es 搜索错误", e);
         }
         return searchResponse;
     }

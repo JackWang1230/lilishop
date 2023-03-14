@@ -1,9 +1,11 @@
 package cn.lili.modules.goods.entity.vos;
 
 import cn.lili.modules.goods.entity.dos.DraftGoods;
+import cn.lili.modules.goods.entity.dos.Wholesale;
 import cn.lili.modules.goods.entity.dto.GoodsParamsDTO;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
@@ -13,6 +15,7 @@ import java.util.List;
  * @author pikachu
  * @since 2020-02-26 23:24:13
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 public class DraftGoodsVO extends DraftGoods {
 
@@ -29,4 +32,10 @@ public class DraftGoodsVO extends DraftGoods {
 
     @ApiModelProperty(value = "sku列表")
     private List<GoodsSkuVO> skuList;
+
+    /**
+     * 批发商品规则
+     */
+    @ApiModelProperty(value = "批发商品规则")
+    private List<Wholesale> wholesaleList;
 }

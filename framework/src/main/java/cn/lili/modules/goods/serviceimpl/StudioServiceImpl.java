@@ -1,6 +1,7 @@
 package cn.lili.modules.goods.serviceimpl;
 
 import cn.hutool.core.convert.Convert;
+import cn.hutool.core.text.CharSequenceUtil;
 import cn.hutool.json.JSONUtil;
 import cn.lili.common.enums.ResultCode;
 import cn.lili.common.exception.ServiceException;
@@ -32,12 +33,15 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -117,7 +121,7 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
                     rocketmqCustomProperties.getPromotionTopic());
 
             //直播间结束
-            broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.START.name());
+            broadcastMessage = new BroadcastMessage(studio.getId(), StudioStatusEnum.END.name());
             this.timeTrigger.edit(
                     TimeExecuteConstant.BROADCAST_EXECUTOR,
                     broadcastMessage,
@@ -157,12 +161,12 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Boolean push(Integer roomId, Integer goodsId, String storeId) {
+    public Boolean push(Integer roomId, Integer liveGoodsId, String storeId, String goodsId) {
 
         //判断直播间是否已添加商品
         if (studioCommodityService.getOne(
                 new LambdaQueryWrapper<StudioCommodity>().eq(StudioCommodity::getRoomId, roomId)
-                        .eq(StudioCommodity::getGoodsId, goodsId)) != null) {
+                        .eq(StudioCommodity::getGoodsId, liveGoodsId)) != null) {
             throw new ServiceException(ResultCode.STODIO_GOODS_EXIST_ERROR);
         }
 
@@ -172,8 +176,8 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
         }
 
         //调用微信接口添加直播间商品并进行记录
-        if (Boolean.TRUE.equals(wechatLivePlayerUtil.pushGoods(roomId, goodsId))) {
-            studioCommodityService.save(new StudioCommodity(roomId, goodsId));
+        if (Boolean.TRUE.equals(wechatLivePlayerUtil.pushGoods(roomId, liveGoodsId))) {
+            studioCommodityService.save(new StudioCommodity(roomId, liveGoodsId));
             //添加直播间商品数量
             Studio studio = this.getByRoomId(roomId);
             studio.setRoomGoodsNum(studio.getRoomGoodsNum() != null ? studio.getRoomGoodsNum() + 1 : 1);
@@ -209,15 +213,27 @@ public class StudioServiceImpl extends ServiceImpl<StudioMapper, Studio> impleme
     }
 
     @Override
-    public IPage<Studio> studioList(PageVO pageVO, Integer recommend, String status) {
+    public IPage<StudioVO> studioList(PageVO pageVO, Integer recommend, String status) {
         QueryWrapper queryWrapper = new QueryWrapper<Studio>()
                 .eq(recommend != null, "recommend", true)
-                .eq(status != null, "status", status)
+                .eq(CharSequenceUtil.isNotEmpty(status), "status", status)
                 .orderByDesc("create_time");
         if (UserContext.getCurrentUser() != null && UserContext.getCurrentUser().getRole().equals(UserEnums.STORE)) {
             queryWrapper.eq("store_id", UserContext.getCurrentUser().getStoreId());
         }
-        return this.page(PageUtil.initPage(pageVO), queryWrapper);
+        Page page = this.page(PageUtil.initPage(pageVO), queryWrapper);
+        List<Studio> records = page.getRecords();
+        List<StudioVO> studioVOS = new ArrayList<>();
+        for (Studio record : records) {
+            StudioVO studioVO = new StudioVO();
+            //获取直播间信息
+            BeanUtil.copyProperties(record, studioVO);
+            //获取直播间商品信息
+            studioVO.setCommodityList(commodityMapper.getCommodityByRoomId(studioVO.getRoomId()));
+            studioVOS.add(studioVO);
+        }
+        page.setRecords(studioVOS);
+        return page;
 
     }
 
